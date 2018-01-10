@@ -1,16 +1,18 @@
 package com.bitcoin.forward;
 
+import com.bitcoin.forward.Transaction;
+
+
 public class TxHandler {
 
+	private UTXOPool utxoPool;
     /**
      * Creates a public ledger whose current UTXOPool (collection of unspent transaction outputs) is
      * {@code utxoPool}. This should make a copy of utxoPool by using the UTXOPool(UTXOPool uPool)
      * constructor.
      */
     public TxHandler(UTXOPool utxoPool) {
-        // IMPLEMENT THIS
-    	//test
-    	
+    	this.utxoPool = new UTXOPool(utxoPool);
     }
 
     /**
@@ -23,7 +25,27 @@ public class TxHandler {
      *     values; and false otherwise.
      */
     public boolean isValidTx(Transaction tx) {
-        // IMPLEMENT THIS
+    	UTXOPool uniqueUtxos = new UTXOPool();
+    	double previousTxOutSum = 0;
+    	double currentTxOutSum = 0;
+    	for (int i = 0; i < tx.numInputs(); i++) {
+    		Transaction.Input in = tx.getInput(i);
+    		UTXO utxo = new UTXO(in.prevTxHash, in.outputIndex);
+    		Transaction.Output output = utxoPool.getTxOutput(utxo);
+    		if (!utxoPool.contains(utxo)) return false;
+    		if (!Crypto.verifySignature(output.address, tx.getRawDataToSign(i), in.signature))
+    			return false;
+    		if (uniqueUtxos.contains(utxo)) return false;
+    		uniqueUtxos.addUTXO(utxo, output);
+    		previousTxOutSum += output.value;
+    	}
+		
+		for (Transaction.Output out : tx.getOutputs()) {
+			if (out.value < 0) return false;
+			currentTxOutSum += out.value;
+		}
+		return previousTxOutSum >= currentTxOutSum;
+    	
     }
 
     /**
