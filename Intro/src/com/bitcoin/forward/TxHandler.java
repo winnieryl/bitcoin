@@ -1,7 +1,10 @@
 package com.bitcoin.forward;
 
-import com.bitcoin.forward.Transaction;
+import java.util.HashSet;
+import java.util.Set;
 
+import com.bitcoin.forward.Transaction;
+import com.bitcoin.forward.Crypto;
 
 public class TxHandler {
 
@@ -54,7 +57,24 @@ public class TxHandler {
      * updating the current UTXO pool as appropriate.
      */
     public Transaction[] handleTxs(Transaction[] possibleTxs) {
-        // IMPLEMENT THIS
+    	Set<Transaction> validTxs = new HashSet<>();
+    	for (Transaction tx : possibleTxs) {
+    		if (isValidTx(tx)) {
+    			validTxs.add(tx);
+    			for (Transaction.Input in : tx.getInputs()) {
+    				UTXO utxo = new UTXO(in.prevTxHash, in.outputIndex);
+    				utxoPool.removeUTXO(utxo);
+    			}
+    			for (int i = 0; i < tx.numOutputs(); i++) {
+    				Transaction.Output out = tx.getOutput(i);
+    				UTXO utxo = new UTXO(tx.getHash(), i);
+    				utxoPool.addUTXO(utxo, out);
+    			}
+    		}
+    	}
+    	
+    	Transaction[] validTxArray = new Transaction[validTxs.size()];
+    	return validTxs.toArray(validTxArray);
     }
 
 }
